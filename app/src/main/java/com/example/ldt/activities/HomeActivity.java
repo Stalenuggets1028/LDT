@@ -160,16 +160,27 @@ public class HomeActivity extends AppCompatActivity {
         binding.ivLights.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (firstClick) {
-                    firstClick = false;
-                    FragmentManager fragmentManager = getSupportFragmentManager();
-                    fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, LightsFragment.class, null)
-                            .addToBackStack(null).commit();
-                } else {
-                    firstClick = true;
-                    FragmentManager fragmentManager = getSupportFragmentManager();
-                    fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, MainFragment.class, null)
-                            .addToBackStack(null).commit();
+                //Build database
+                UserDao userDao2 = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, AppDatabase.DB_NAME)
+                        .allowMainThreadQueries().build().userDao();
+
+                // Find health entry corresponding to current user
+                int id2 = userDao2.findByUsername(usr).getUid();
+                Health health2 = userDao2.findByUid(id2);
+
+                // If tamagotchi has hatched
+                if (!health2.getName().equals("Egg")) {
+                    if (firstClick) {
+                        firstClick = false;
+                        FragmentManager fragmentManager = getSupportFragmentManager();
+                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, LightsFragment.class, null)
+                                .addToBackStack(null).commit();
+                    } else {
+                        firstClick = true;
+                        FragmentManager fragmentManager = getSupportFragmentManager();
+                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, MainFragment.class, null)
+                                .addToBackStack(null).commit();
+                    }
                 }
             }
         });

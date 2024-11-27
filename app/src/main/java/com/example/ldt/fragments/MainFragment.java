@@ -11,6 +11,7 @@ import android.os.Bundle;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.room.Room;
 
 import android.os.CountDownTimer;
@@ -33,6 +34,9 @@ import com.example.ldt.db.TamadexDao;
 import com.example.ldt.db.UserDao;
 
 import java.util.Random;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleObserver;
+import androidx.lifecycle.OnLifecycleEvent;
 
 /**
  * @author Erika Iwata
@@ -46,6 +50,15 @@ public class MainFragment extends Fragment {
     //Declare fields
     private UserDao userDao;
     private TamadexDao tamadexDao;
+    private FragmentMainBinding binding;
+    private BathroomFragment bathroomFragment;
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        getLifecycle().removeObserver(bathroomFragment); // Clean up the observer
+        binding = null; // Prevent memory leaks
+    }
 
     public MainFragment() {
         // Required empty public constructor
@@ -61,7 +74,6 @@ public class MainFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         //Setup onCreate
         super.onCreate(savedInstanceState);
-
     }
 
     /**
@@ -110,6 +122,12 @@ public class MainFragment extends Fragment {
             // If lights are on, hide the sleep animation view
             binding.ivMiddleScreen3.setVisibility(View.INVISIBLE);
         }
+
+        // Initialize poop animation manager
+        bathroomFragment = new BathroomFragment(binding.ivPoopAnimation);
+
+        // Add as a LifecycleObserver
+        getLifecycle().addObserver(bathroomFragment);
 
         //Play idle animation for corresponding tamagotchi
         if (health.getName().equals("Egg")) {
