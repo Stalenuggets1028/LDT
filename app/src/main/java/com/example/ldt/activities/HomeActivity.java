@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,9 +27,12 @@ import com.example.ldt.databinding.DialogExitGameBinding;
 import com.example.ldt.db.AppDatabase;
 import com.example.ldt.db.Health;
 import com.example.ldt.db.UserDao;
+import com.example.ldt.fragments.BathroomFragment;
 import com.example.ldt.fragments.HealthFragment;
 import com.example.ldt.fragments.LightsFragment;
 import com.example.ldt.fragments.MainFragment;
+import androidx.fragment.app.Fragment;
+
 
 /**
  * @author Erika Iwata
@@ -94,12 +98,14 @@ public class HomeActivity extends AppCompatActivity {
             new Handler(getMainLooper()).postDelayed(() -> {
                 binding.ivHealth.setImageResource(R.drawable.health_icon_black);
                 binding.ivLights.setImageResource(R.drawable.lights_icon_black);
+                binding.ivBathroom.setImageResource(R.drawable.bathroom_icon_black);
             }, 6000); // 6 second
 
         // If tamagotchi has already hatched
         } else {
             binding.ivHealth.setImageResource(R.drawable.health_icon_black);
             binding.ivLights.setImageResource(R.drawable.lights_icon_black);
+            binding.ivBathroom.setImageResource(R.drawable.bathroom_icon_black);
         }
 
         // Click - Back button
@@ -128,6 +134,10 @@ public class HomeActivity extends AppCompatActivity {
         binding.ivHealth.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // Ensure MainFragment is added if not already
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                Fragment currentFragment = fragmentManager.findFragmentById(R.id.fragmentContainerView);
+
                 //Build database
                 UserDao userDao2 = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, AppDatabase.DB_NAME)
                         .allowMainThreadQueries().build().userDao();
@@ -140,17 +150,31 @@ public class HomeActivity extends AppCompatActivity {
                 if (!health2.getName().equals("Egg")) {
 
                     // If first click go to health screen
-                    if (firstClick) {
-                        firstClick = false;
-                        FragmentManager fragmentManager = getSupportFragmentManager();
-                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, HealthFragment.class, null)
-                                .addToBackStack(null).commit();
-                        // If 2nd click exit health screen
+//                    if (firstClick) {
+//                        firstClick = false;
+//                        fragmentManager = getSupportFragmentManager();
+//                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, HealthFragment.class, null)
+//                                .addToBackStack(null).commit();
+//                        // If 2nd click exit health screen
+//                    } else {
+//                        firstClick = true;
+//                        fragmentManager = getSupportFragmentManager();
+//                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, MainFragment.class, null)
+//                                .addToBackStack(null).commit();
+//                    }
+                    // Check if the current fragment is MainFragment
+                    if (currentFragment instanceof HealthFragment) {
+                        Log.d("HomeActivity", "Switching back to MainFragment from HealthFragment.");
+                        // Replace with MainFragment
+                        fragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainerView, new MainFragment(), "MAIN_FRAGMENT")
+                                .commit();
                     } else {
-                        firstClick = true;
-                        FragmentManager fragmentManager = getSupportFragmentManager();
-                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, MainFragment.class, null)
-                                .addToBackStack(null).commit();
+                        Log.d("HomeActivity", "Switching to HealthFragment.");
+                        // Replace with HealthFragment
+                        fragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainerView, new HealthFragment(), "HEALTH_FRAGMENT")
+                                .commit();
                     }
                 }
             }
@@ -160,6 +184,10 @@ public class HomeActivity extends AppCompatActivity {
         binding.ivLights.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // Ensure MainFragment is added if not already
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                Fragment currentFragment = fragmentManager.findFragmentById(R.id.fragmentContainerView);
+
                 //Build database
                 UserDao userDao2 = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, AppDatabase.DB_NAME)
                         .allowMainThreadQueries().build().userDao();
@@ -170,21 +198,61 @@ public class HomeActivity extends AppCompatActivity {
 
                 // If tamagotchi has hatched
                 if (!health2.getName().equals("Egg")) {
-                    if (firstClick) {
-                        firstClick = false;
-                        FragmentManager fragmentManager = getSupportFragmentManager();
-                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, LightsFragment.class, null)
-                                .addToBackStack(null).commit();
+//                    if (firstClick) {
+//                        firstClick = false;
+//                        fragmentManager = getSupportFragmentManager();
+//                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, LightsFragment.class, null)
+//                                .addToBackStack(null).commit();
+//                    } else {
+//                        firstClick = true;
+//                        fragmentManager = getSupportFragmentManager();
+//                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, MainFragment.class, null)
+//                                .addToBackStack(null).commit();
+//                    }
+                    if (currentFragment instanceof LightsFragment) {
+                        Log.d("HomeActivity", "Switching back to MainFragment from LightsFragment.");
+                        // Replace with MainFragment
+                        fragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainerView, new MainFragment(), "MAIN_FRAGMENT")
+                                .commit();
                     } else {
-                        firstClick = true;
-                        FragmentManager fragmentManager = getSupportFragmentManager();
-                        fragmentManager.beginTransaction().replace(R.id.fragmentContainerView, MainFragment.class, null)
-                                .addToBackStack(null).commit();
+                        Log.d("HomeActivity", "Switching to LightsFragment.");
+                        // Replace with LightsFragment
+                        fragmentManager.beginTransaction()
+                                .replace(R.id.fragmentContainerView, new LightsFragment(), "LIGHTS_FRAGMENT")
+                                .commit();
                     }
                 }
             }
         });
 
+        binding.ivBathroom.setOnClickListener(v -> {
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            Fragment currentFragment = fragmentManager.findFragmentById(R.id.fragmentContainerView);
+
+            if (!(currentFragment instanceof MainFragment)) {
+                Log.d("HomeActivity", "Switching to MainFragment for Bathroom action.");
+                // Replace with MainFragment and start cleaner animation
+                MainFragment mainFragment = new MainFragment();
+                fragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainerView, mainFragment, "MAIN_FRAGMENT")
+                        .commit();
+
+                fragmentManager.executePendingTransactions(); // Ensure transaction completes
+
+                // Delay to ensure the fragment is attached before starting animation
+                new Handler().postDelayed(() -> {
+                    if (mainFragment.isAdded()) {
+                        mainFragment.startCleanerAnimation();
+                    } else {
+                        Log.e("HomeActivity", "MainFragment re-attachment failed.");
+                    }
+                }, 100); // Add a small delay
+            } else {
+                Log.d("HomeActivity", "MainFragment is already active. Starting cleaner animation.");
+                ((MainFragment) currentFragment).startCleanerAnimation();
+            }
+        });
 
     } //End onCreate
 

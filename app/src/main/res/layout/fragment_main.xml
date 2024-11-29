@@ -68,6 +68,16 @@
             android:src="@drawable/animation_poop"
             android:visibility="invisible" />
 
+        <!-- Image View for Cleaner Animation -->
+
+        <ImageView
+            android:id="@+id/iv_cleaner"
+            android:layout_width="100dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:src="@drawable/cleaner"
+            android:visibility="gone" />
+
     </RelativeLayout>
 
 </FrameLayout>

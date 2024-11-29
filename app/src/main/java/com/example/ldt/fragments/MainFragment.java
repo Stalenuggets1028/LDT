@@ -2,6 +2,10 @@ package com.example.ldt.fragments;
 
 import static android.os.Looper.getMainLooper;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -9,6 +13,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -21,6 +27,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.TranslateAnimation;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,13 +60,8 @@ public class MainFragment extends Fragment {
     private TamadexDao tamadexDao;
     private FragmentMainBinding binding;
     private BathroomFragment bathroomFragment;
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        getLifecycle().removeObserver(bathroomFragment); // Clean up the observer
-        binding = null; // Prevent memory leaks
-    }
+    private boolean isCleaning = false;
+    private ImageView ivCleaner;
 
     public MainFragment() {
         // Required empty public constructor
@@ -90,22 +93,31 @@ public class MainFragment extends Fragment {
      */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        //View binding
-        FragmentMainBinding binding = FragmentMainBinding.inflate(inflater, container, false);
+        // Assign to fragment-level binding
+        binding = FragmentMainBinding.inflate(inflater, container, false);
+
+        // Use fragment-level binding for the root view
         View view = binding.getRoot();
 
-        //Build database
+        // Build database
         userDao = Room.databaseBuilder(getContext(), AppDatabase.class, AppDatabase.DB_NAME)
                 .allowMainThreadQueries().build().userDao();
         tamadexDao = Room.databaseBuilder(getContext(), AppDatabase.class, AppDatabase.DB_NAME)
                 .allowMainThreadQueries().build().tamadexDao();
 
-        //Get username
+        // Check if ivCleaner is properly bound
+        if (binding.ivCleaner == null) {
+            Log.e("MainFragment", "ivCleaner is null. Check fragment_main.xml layout or binding initialization.");
+        } else {
+            Log.d("MainFragment", "ivCleaner initialized successfully.");
+        }
+
+        // Get username
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getContext());
         SharedPreferences.Editor editor = sharedPref.edit();
         String usr = sharedPref.getString("usr", "");
 
-        //Find health entry corresponding to current user
+        // Find health entry corresponding to current user
         int id = userDao.findByUsername(usr).getUid();
         Health health = userDao.findByUid(id);
 
@@ -124,15 +136,16 @@ public class MainFragment extends Fragment {
         }
 
         // Initialize poop animation manager
-        bathroomFragment = new BathroomFragment(binding.ivPoopAnimation);
+        Log.d("MainFragment", "ivCleaner initialized: " + (binding.ivCleaner != null));
+        bathroomFragment = new BathroomFragment(binding.ivPoopAnimation, binding.ivCleaner);
 
         // Add as a LifecycleObserver
         getLifecycle().addObserver(bathroomFragment);
 
-        //Play idle animation for corresponding tamagotchi
+        // Play idle animation for corresponding tamagotchi
         if (health.getName().equals("Egg")) {
             eggIdleAnimation(view, binding, health, userDao, tamadexDao);
-        } else if (health.getName().equals("Tarakotchi")){
+        } else if (health.getName().equals("Tarakotchi")) {
             tarakotchiIdleAnimation(view, binding);
         } else if (health.getName().equals("Hanatchi")) {
             hanatchiIdleAnimation(view, binding);
@@ -142,6 +155,85 @@ public class MainFragment extends Fragment {
 
         return view;
     }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // Re-initialize the binding to ensure it's not null
+        if (binding == null) {
+            Log.e("MainFragment", "Binding is null in onViewCreated. Re-binding...");
+            binding = FragmentMainBinding.bind(view);  // Re-bind the view
+        }
+
+        ivCleaner = binding.ivCleaner;
+
+        if (ivCleaner != null) {
+            Log.d("MainFragment", "ivCleaner initialized successfully.");
+        } else {
+            Log.e("MainFragment", "ivCleaner is null.");
+        }
+    }
+
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null; // Clear the binding to prevent memory leaks
+    }
+
+    public void startCleanerAnimation() {
+        if (binding == null || binding.ivCleaner == null) {
+            Log.e("MainFragment", "Binding or ivCleaner is null. Animation cannot start.");
+            return;
+        }
+
+        // Initialize Cleaner Animation
+        ImageView ivCleaner = binding.ivCleaner;
+        ImageView ivPoopAnimation = binding.ivPoopAnimation;
+        ImageView ivMiddleScreen2 = binding.ivMiddleScreen2; // Example for Tamagotchi idle animation
+
+        // Make cleaner and poop animation visible
+        ivCleaner.setVisibility(View.VISIBLE);
+        ivPoopAnimation.setVisibility(View.VISIBLE);
+
+        // Screen width (to calculate animation distance)
+        int screenWidth = requireContext().getResources().getDisplayMetrics().widthPixels;
+
+        // Create Animator for the Cleaner
+        ObjectAnimator cleanerAnimator = ObjectAnimator.ofFloat(ivCleaner, "translationX", screenWidth, -ivCleaner.getWidth());
+        cleanerAnimator.setDuration(5000); // Duration in milliseconds (adjust to control speed)
+
+        // Create Animators for Poop and Idle Animations
+        ObjectAnimator poopAnimator = ObjectAnimator.ofFloat(ivPoopAnimation, "translationX", 0, -screenWidth);
+        ObjectAnimator idleAnimator = ObjectAnimator.ofFloat(ivMiddleScreen2, "translationX", 0, -screenWidth);
+
+        poopAnimator.setDuration(5000); // Same duration as cleaner to sync movement
+        idleAnimator.setDuration(5000);
+
+        // Animator Set to Run Animations Together
+        AnimatorSet animatorSet = new AnimatorSet();
+        animatorSet.playTogether(cleanerAnimator, poopAnimator, idleAnimator);
+        animatorSet.start();
+
+        // Listener to Handle Post-Animation Behavior
+        animatorSet.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                super.onAnimationEnd(animation);
+                // Hide cleaner after it slides off screen
+                ivCleaner.setVisibility(View.GONE);
+
+                // Reset positions of animations
+                ivPoopAnimation.setTranslationX(0);
+                ivMiddleScreen2.setTranslationX(0);
+
+                // Delay Poop Animation Visibility after Cleaner Animation Ends
+                new Handler().postDelayed(() -> ivPoopAnimation.setVisibility(View.INVISIBLE), 0);
+            }
+        });
+    }
+
 
     /**
      * Play egg idle animation using timers and handlers
