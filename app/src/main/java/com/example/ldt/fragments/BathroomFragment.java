@@ -1,28 +1,46 @@
 package com.example.ldt.fragments;
 
+import android.content.Context;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.view.animation.TranslateAnimation;
 import android.widget.ImageView;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.OnLifecycleEvent;
 
 import com.example.ldt.R;
+import com.example.ldt.activities.HomeActivity;
 
-public class BathroomFragment implements LifecycleObserver {
+public class BathroomFragment extends Fragment implements DefaultLifecycleObserver {
     private final Handler handler = new Handler();
+    private final Handler skullHandler = new Handler();
     private final ImageView poopAnimationView;
     private final ImageView cleanerView;
+    private final ImageView skullView;
     private AnimationDrawable poopAnimation;
     private boolean isCleaning = false;
+    private boolean isPoopVisible = false; // Tracks poop visibility state
 
-    public BathroomFragment(ImageView poopAnimationView, ImageView cleanerView) {
+    public BathroomFragment(ImageView poopAnimationView, ImageView cleanerView, ImageView skullView) {
         this.poopAnimationView = poopAnimationView;
         this.cleanerView = cleanerView;
+        this.skullView = skullView;
+
+        if (this.skullView == null) {
+            Log.e("BathroomFragment", "ivSkull is null in BathroomFragment constructor.");
+        } else {
+            Log.d("BathroomFragment", "ivSkull is properly initialized in BathroomFragment.");
+        }
     }
+
 
     private final Runnable poopTask = new Runnable() {
         @Override
@@ -34,79 +52,108 @@ public class BathroomFragment implements LifecycleObserver {
             }
 
             Log.d("PoopAnimationManager", "Making poop animation visible");
-            poopAnimationView.setVisibility(View.VISIBLE);
+            setPoopVisible(true);
 
-            // Start poop animation
-            poopAnimationView.setBackgroundResource(R.drawable.animation_poop);
-            poopAnimation = (AnimationDrawable) poopAnimationView.getBackground();
-            poopAnimation.start();
+            // Start the skull timer only after poop becomes visible
+            Log.d("BathroomFragment", "Starting skull timer.");
+            skullHandler.postDelayed(skullTask, 60000); // Skull appears 60 seconds after poop
 
-            // Schedule the next check
+            // Reschedule poopTask to repeat after 30 seconds (if needed for looped behavior)
             handler.postDelayed(this, 30000);
         }
     };
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    public void start() {
-        Log.d("PoopAnimationManager", "Starting poop animation loop");
+    private final Runnable skullTask = new Runnable() {
+        @Override
+        public void run() {
+            if (skullView == null || skullView.getVisibility() == View.VISIBLE) {
+                Log.e("BathroomFragment", "Skull is already visible or ivSkull is null.");
+                triggerSickFragment();
+                return; // Prevent duplicate triggers
+            }
+
+            Log.d("BathroomFragment", "Poop animation neglected for too long. Triggering skull in SickFragment.");
+            showSkull();
+        }
+    };
+
+
+    private void showSkull() {
+        if (skullView == null) {
+            Log.e("BathroomFragment", "ivSkull is null. Cannot make it visible.");
+            return; // Prevent crash
+        }
+
+        Log.d("BathroomFragment", "Making ivSkull visible.");
+        skullView.setVisibility(View.VISIBLE); // Show the skull
+    }
+
+    @Override
+    public void onStart(@NonNull LifecycleOwner owner) {
+        Log.d("PoopAnimationManager", "Starting poop and skull handlers.");
         handler.postDelayed(poopTask, 30000);
+        skullHandler.postDelayed(skullTask, 60000); // Trigger skull after 60 seconds of poop
+
+        // Restore poop visibility
+        if (isPoopVisible) {
+            setPoopVisible(true);
+        }
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    public void stop() {
-        Log.d("PoopAnimationManager", "Stopping poop animation loop");
+    @Override
+    public void onStop(@NonNull LifecycleOwner owner) {
+        Log.d("PoopAnimationManager", "Stopping poop and skull handlers.");
         handler.removeCallbacks(poopTask);
+        skullHandler.removeCallbacks(skullTask);
+
+        // Keep track of poop visibility state
+        isPoopVisible = poopAnimationView.getVisibility() == View.VISIBLE;
     }
 
-    public void startCleanerAnimation() {
-        if (isCleaning) return; // Prevent multiple animations
-        isCleaning = true;
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        getLifecycle().addObserver(this);
+    }
 
-        Log.d("CleanerAnimationManager", "Starting cleaner animation");
 
-        // Make cleaner visible
-        cleanerView.setVisibility(View.VISIBLE);
+    public void setPoopVisible(boolean visible) {
+        isPoopVisible = visible;
 
-        // Slide cleaner from right to left
-        TranslateAnimation cleanerSlide = new TranslateAnimation(
-                TranslateAnimation.RELATIVE_TO_PARENT, 1.0f, // Start off-screen right
-                TranslateAnimation.RELATIVE_TO_PARENT, -1.0f, // End off-screen left
-                TranslateAnimation.RELATIVE_TO_PARENT, 0.0f,
-                TranslateAnimation.RELATIVE_TO_PARENT, 0.0f);
-        cleanerSlide.setDuration(5000); // 5 seconds
-        cleanerSlide.setFillAfter(true);
+        if (poopAnimationView == null) return;
 
-        // Slide poop animation view with cleaner
-        TranslateAnimation poopSlide = new TranslateAnimation(
-                TranslateAnimation.RELATIVE_TO_PARENT, 0.0f,
-                TranslateAnimation.RELATIVE_TO_PARENT, -1.0f,
-                TranslateAnimation.RELATIVE_TO_PARENT, 0.0f,
-                TranslateAnimation.RELATIVE_TO_PARENT, 0.0f);
-        poopSlide.setDuration(5000);
-        poopSlide.setFillAfter(true);
-
-        cleanerView.startAnimation(cleanerSlide);
-        poopAnimationView.startAnimation(poopSlide);
-
-        // Reset views after animation
-        new Handler().postDelayed(() -> {
-            Log.d("CleanerAnimationManager", "Resetting positions after cleaner animation");
-
-            cleanerView.clearAnimation();
-            poopAnimationView.clearAnimation();
-
-            // Hide poop animation for the next 30 seconds
+        if (visible) {
+            poopAnimationView.setVisibility(View.VISIBLE);
+            startPoopAnimation();
+        } else {
             poopAnimationView.setVisibility(View.INVISIBLE);
-
-            // Reappear poop animation after 30 seconds
-            new Handler().postDelayed(() -> {
-                Log.d("CleanerAnimationManager", "Making poop animation visible again");
-                poopAnimationView.setVisibility(View.VISIBLE);
-                poopAnimation.start();
-                isCleaning = false; // Allow new cleaning animations
-            }, 30000);
-
-            cleanerView.setVisibility(View.GONE);
-        }, 5000);
+            stopPoopAnimation();
+        }
     }
+
+    private void startPoopAnimation() {
+        if (poopAnimationView != null) {
+            poopAnimationView.setBackgroundResource(R.drawable.animation_poop);
+            poopAnimation = (AnimationDrawable) poopAnimationView.getBackground();
+            poopAnimation.start();
+        }
+    }
+
+    private void stopPoopAnimation() {
+        if (poopAnimation != null) {
+            poopAnimation.stop();
+        }
+    }
+
+    private void triggerSickFragment() {
+        Fragment parentFragment = getParentFragment();
+        if (parentFragment == null || !(parentFragment.getActivity() instanceof HomeActivity)) {
+            Log.e("BathroomFragment", "Cannot trigger SickFragment. Parent fragment or activity is invalid.");
+            return;
+        }
+
+        HomeActivity homeActivity = (HomeActivity) parentFragment.getActivity();
+        homeActivity.showSickFragment();
+    }
+
 }

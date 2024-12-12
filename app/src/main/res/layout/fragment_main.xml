@@ -78,6 +78,18 @@
             android:src="@drawable/cleaner"
             android:visibility="gone" />
 
+        <!-- Image View for Skull/Sun Icon -->
+        <ImageView
+            android:id="@+id/iv_skull"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_above="@id/iv_poop_animation"
+            android:layout_marginBottom="65dp"
+            android:layout_marginEnd="50dp"
+            android:layout_alignParentEnd="true"
+            android:visibility="invisible"
+            android:src="@drawable/skull" />
+
     </RelativeLayout>
 
 </FrameLayout>

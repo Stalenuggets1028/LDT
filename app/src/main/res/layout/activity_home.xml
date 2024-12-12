@@ -10,6 +10,13 @@
     android:background="@color/dark_grey"
     tools:context=".activities.HomeActivity">
 
+    <FrameLayout
+        android:id="@+id/bathroomFragmentContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+
     <!--Image View for Back Button-->
 
     <ImageView

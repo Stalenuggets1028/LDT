@@ -45,6 +45,8 @@ import java.util.Random;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.OnLifecycleEvent;
+import androidx.fragment.app.FragmentManager;
+
 
 /**
  * @author Erika Iwata
@@ -60,7 +62,6 @@ public class MainFragment extends Fragment {
     private TamadexDao tamadexDao;
     private FragmentMainBinding binding;
     private BathroomFragment bathroomFragment;
-    private boolean isCleaning = false;
     private ImageView ivCleaner;
 
     public MainFragment() {
@@ -95,8 +96,6 @@ public class MainFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Assign to fragment-level binding
         binding = FragmentMainBinding.inflate(inflater, container, false);
-
-        // Use fragment-level binding for the root view
         View view = binding.getRoot();
 
         // Build database
@@ -105,16 +104,11 @@ public class MainFragment extends Fragment {
         tamadexDao = Room.databaseBuilder(getContext(), AppDatabase.class, AppDatabase.DB_NAME)
                 .allowMainThreadQueries().build().tamadexDao();
 
-        // Check if ivCleaner is properly bound
-        if (binding.ivCleaner == null) {
-            Log.e("MainFragment", "ivCleaner is null. Check fragment_main.xml layout or binding initialization.");
-        } else {
-            Log.d("MainFragment", "ivCleaner initialized successfully.");
-        }
+        // Initialize and attach BathroomFragment
+        attachBathroomFragment();
 
         // Get username
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getContext());
-        SharedPreferences.Editor editor = sharedPref.edit();
         String usr = sharedPref.getString("usr", "");
 
         // Find health entry corresponding to current user
@@ -127,20 +121,11 @@ public class MainFragment extends Fragment {
 
         // Lights?
         if (!isLightsOn) { // Lights off
-            // Make sure to hide the idle animation views
             binding.ivMiddleScreen2.setVisibility(View.INVISIBLE);
             playSleepAnimation(view, binding);
         } else {
-            // If lights are on, hide the sleep animation view
             binding.ivMiddleScreen3.setVisibility(View.INVISIBLE);
         }
-
-        // Initialize poop animation manager
-        Log.d("MainFragment", "ivCleaner initialized: " + (binding.ivCleaner != null));
-        bathroomFragment = new BathroomFragment(binding.ivPoopAnimation, binding.ivCleaner);
-
-        // Add as a LifecycleObserver
-        getLifecycle().addObserver(bathroomFragment);
 
         // Play idle animation for corresponding tamagotchi
         if (health.getName().equals("Egg")) {
@@ -180,6 +165,37 @@ public class MainFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null; // Clear the binding to prevent memory leaks
+    }
+
+
+    private void attachBathroomFragment() {
+        FragmentManager fragmentManager = getChildFragmentManager();
+        bathroomFragment = (BathroomFragment) fragmentManager.findFragmentByTag("BATHROOM_FRAGMENT");
+
+        if (binding.ivSkull == null) {
+            Log.e("MainFragment", "ivSkull is null in MainFragment.");
+        } else {
+            Log.d("MainFragment", "ivSkull is initialized in MainFragment.");
+        }
+
+        if (bathroomFragment == null) {
+            // Instantiate BathroomFragment
+            bathroomFragment = new BathroomFragment(binding.ivPoopAnimation, binding.ivCleaner, binding.ivSkull);
+            getLifecycle().addObserver(bathroomFragment);
+
+
+            // Add BathroomFragment as a child fragment
+            fragmentManager.beginTransaction()
+                    .add(bathroomFragment, "BATHROOM_FRAGMENT")
+                    .commitNow();
+
+            Log.d("MainFragment", "BathroomFragment attached.");
+        } else {
+            Log.d("MainFragment", "BathroomFragment already exists.");
+        }
+
+        // Add as a LifecycleObserver
+        getLifecycle().addObserver(bathroomFragment);
     }
 
     public void startCleanerAnimation() {
